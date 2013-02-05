@@ -98,7 +98,6 @@ def __main__():
     parser.add_option( "--genes_exp_output", dest="genes_exp_output" )
     parser.add_option( "--tss_groups_exp_output", dest="tss_groups_exp_output" )
     parser.add_option( "--cds_exp_fpkm_tracking_output", dest="cds_exp_fpkm_tracking_output" )
-    parser.add_option( "--cds_diff_output", dest="cds_diff_output" )
     parser.add_option( "--isoforms_count_tracking_output", dest="isoforms_count_tracking_output" )
     parser.add_option( "--genes_count_tracking_output", dest="genes_count_tracking_output" )
     parser.add_option( "--cds_count_tracking_output", dest="cds_count_tracking_output" )
