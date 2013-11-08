@@ -13,8 +13,10 @@ def stop_err( msg ):
 def html_report_from_directory( html_out, dir ):
     html_out.write( '<html>\n<head>\n<title>Galaxy - cummeRbund Output</title>\n</head>\n<body>\n<p/>\n<ul>\n' )
     for fname in sorted( os.listdir( dir ) ):
-        # html_out.write(  '<li><a href="%s">%s</a></li>\n' % ( fname, fname ) )
-        html_out.write(  '<li><a href="%s"><img src="%s" alt="" height="80" width="80">%s</a></li>\n' % ( fname, fname , fname ) )
+        if fname.endswith(".txt"):
+            html_out.write(  '<li><a href="%s">%s</a></li>\n' % ( fname, fname ) )
+        else:
+            html_out.write(  '<li><a href="%s"><img src="%s" alt="" height="80" width="80">%s</a></li>\n' % ( fname, fname , fname ) )
     html_out.write( '</ul>\n</body>\n</html>\n' )
 
 def __main__():
