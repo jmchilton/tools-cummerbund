@@ -1,6 +1,10 @@
 <tool id="cummerbund" name="cummeRbund" version="0.0.7">
     <description>R package designed to aid and simplify the task of analyzing Cufflinks RNA-Seq output</description>
-    
+    <!--
+    <requirements>
+        <requirement type="package" version="3.0.1">R_3_0_1</requirement>
+    </requirements>
+    -->
     <command interpreter="python">
         cummerbund_wrapper.py
             --r-script ${script_file}
@@ -26,6 +30,30 @@
                 <param format="tabular" name="promoters_diff" type="data" label="Promoters differential expression testing"/>
                 <param format="tabular" name="splicing_diff" type="data" label="Splicing differential expression testing"/>
                 <param name="rebuild" type="hidden" value="TRUE"/>
+                <conditional name="reference">
+                    <param name="include" type="boolean" truevalue="yes" falsevalue="no" checked="false" label="Include genome reference and Feature file"/>`
+                    <when value="yes">
+                        <param name="gtf_file" type="data" format="gtf,gff3" label="Transcripts" help="A transcript GFF3 or GTF file produced by cufflinks, cuffcompare, or other source."/>
+                        <conditional name="genome">
+                            <param name="source" type="select" label="Reference sequence data">
+                                <option value="cached">Locally cached</option>
+                                <option value="history">History</option>
+                            </param>
+                            <when value="cached">
+                                <param name="ref_fasta" type="select" label="Select the reference genome that was used for cuffdiff">
+                                    <options from_data_table="all_fasta">
+                                        <filter type="sort_by" column="2" />
+                                        <validator type="no_options" message="No reference fasta files are available" />
+                                    </options>
+                                </param>
+                            </when>
+                            <when value="history">
+                                <param name="ref_file" type="data" format="fasta" label="Using reference file" />
+                            </when>
+                        </conditional>
+                    </when>
+                    <when value="no"/>
+                </conditional>
             </when>
             <when value="history">
                 <param name="input_database" type="data" format="cuffdatadb" label="Select backend database (sqlite)"/>
@@ -227,8 +255,19 @@ get_features &lt;- function(myGenes, f="gene") {
 library("cummeRbund")
 
 ## Initialize cuff object
-cuff &lt;- readCufflinks(dir = "",
 #if $backend_database_source.backend_database_selector == "cuffdiff_output":
+  ## Check if gtfFIle and genome are includes
+  #set $gtf_link = None
+  #if $backend_database_source.reference.include:
+    #set $gtf_link = '.'.join(['cuff',$backend_database_source.reference.gtf_file.extension])
+system('ln -s $backend_database_source.reference.gtf_file $gtf_link')
+    #if $backend_database_source.reference.genome.source == 'cached':
+      #set $ref_file = $backend_database_source.reference.genome.ref_fasta
+    #else
+      #set $ref_file = $backend_database_source.reference.genome.ref_file
+    #end if
+  #end if
+cuff &lt;- readCufflinks(dir = "",
                          dbFile = "${output_database}",
                          geneFPKM = "${genes_fpkm_tracking}",
                          geneDiff = "${genes_exp}",
@@ -241,8 +280,13 @@ cuff &lt;- readCufflinks(dir = "",
                          CDSDiff = "${cds_diff}",
                          promoterFile = "${promoters_diff}",
                          splicingFile = "${splicing_diff}",
+#if $gtf_link:
+                         gtfFile = "${gtf_link}",
+                         genome = "${ref_file}",
+#end if
                          rebuild = T)
 #else:
+cuff &lt;- readCufflinks(dir = "",
                          dbFile = "${backend_database_source.input_database}",
                          rebuild = F)
 #end if

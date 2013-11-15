@@ -58,13 +58,15 @@
             #if $build_cummerbund_db:
                 &amp;&amp; echo 'library(cummeRbund)' > cuffData.r 
                 #if $bias_correction.do_bias_correction == "Yes":
+                    ## cummeRbund relies on the file extension to determine gff format
+                    #set $gtf_link = '.'.join(['cuff',$gtf_input.extension])
+                    &amp;&amp; ln -s $gtf_input $gtf_link
                     #if $bias_correction.seq_source.index_source == "history":
                         ## Custom genome from history.
-                        &amp;&amp; echo 'cuff&lt;-readCufflinks( dbFile = "cuffdata.db", gtfFile = "$gtf_input", genome = "$bias_correction.seq_source.ref_file", rebuild = T)' >> cuffData.r
+                        &amp;&amp; echo 'cuff&lt;-readCufflinks( dbFile = "cuffdata.db", gtfFile = "$gtf_link", genome = "$bias_correction.seq_source.ref_file", rebuild = T)' >> cuffData.r
                     #else:
                         ## Built-in genome.
-                        ${__get_data_table_entry__('sam_fa_indexes', 'value', $gtf_input.dbkey, 'path')}
-                        &amp;&amp; echo 'cuff&lt;-readCufflinks( dbFile = "cuffdata.db", gtfFile = "$gtf_input", genome = "${__get_data_table_entry__('sam_fa_indexes', 'value', $gtf_input.dbkey, 'path')}", rebuild = T)' >> cuffData.r
+                        &amp;&amp; echo 'cuff&lt;-readCufflinks( dbFile = "cuffdata.db", gtfFile = "$gtf_link", genome = "${__get_data_table_entry__('sam_fa_indexes', 'value', $gtf_input.dbkey, 'path')}", rebuild = T)' >> cuffData.r
                     #end if
                 #else 
                     &amp;&amp; echo 'cuff&lt;-readCufflinks( dbFile = "cuffdata.db", rebuild = T)' >> cuffData.r
@@ -134,7 +136,9 @@
             <option value="No" selected="true">No</option>
             <option value="Yes">Yes</option>
         </param>
-        <param name="build_cummerbund_db" type="boolean" truevalue="yes" falsevalue="no" checked="false" label="Build cummeRbund database"/>
+        <param name="build_cummerbund_db" type="boolean" truevalue="yes" falsevalue="no" checked="false" label="Build cummeRbund database">
+          <help>"Perform Bias Correction" must be selected to include gtf and genome reference in the cummeRbund database.</help>
+        </param>
         <conditional name="additional">
             <param name="sAdditional" type="select" label="Set Additional Parameters? (not recommended for paired-end reads)">
                 <option value="No">No</option>
