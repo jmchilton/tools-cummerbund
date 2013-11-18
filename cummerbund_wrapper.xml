@@ -301,6 +301,7 @@ print("REPLICATES:")
 replicates(cuff)
 print("FEATURES:")
 print(annotation(genes(cuff)))
+cat(annotation(genes(cuff))[[1]],sep=",")
 sink()
 
 #for $i, $p in enumerate($plots, start=1):
@@ -355,11 +356,15 @@ csVolcano(genes(cuff), "${p.plot.x}", "${p.plot.y}")
 
     ## Heatmap ##
 	#elif $p.plot['type'] == "heatmap":
+            #if $p.plot.genes and len($p.plot.genes) > 0:
 myGeneIds &lt;- c()
 		#for $g in $p.plot.genes:
 myGeneIds &lt;- c(myGeneIds, "$g['gene_id']")
 		#end for
 myGenes &lt;- getGenes(cuff, myGeneIds)
+            #else 
+myGenes &lt;- getGenes(cuff,annotation(genes(cuff))[[1]])
+            #end if
 csHeatmap(get_features(myGenes, "${p.plot.features}"), clustering="${p.plot.clustering}", labCol="${p.plot.labcol}", labRow="${p.plot.labrow}", border="${p.plot.border}")
 
     ## Cluster ##

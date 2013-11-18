@@ -2,7 +2,9 @@
 CuffData 
 """
 import logging
-import os,os.path,re
+import os,os.path,sys,re
+import tempfile
+from subprocess import Popen
 import galaxy.datatypes.data
 from galaxy.datatypes.images import Html
 from galaxy.datatypes.binary import Binary
@@ -110,6 +112,67 @@ class CuffDiffData( Html ):
         return False
 
 class CuffDataDB( Binary ):
-    file_ext = 'cuffdata'
+    file_ext = 'cuffdatadb'
     is_binary = True
     allow_datatype_change = False
+    MetadataElement( name="sample_names", default=[], desc="Sample names", readonly=True, visible=True, optional=True, no_value=[] )
+    MetadataElement( name="replicate_names", default=[], desc="Replicate names", readonly=True, visible=True, optional=True, no_value=[] )
+    MetadataElement( name="gene_ids", default=[], desc="Gene Ids", readonly=True, visible=True, optional=True, no_value=[] )
+
+    def __init__( self, **kwd ):
+        Binary.__init__( self, **kwd )
+        log.info('Creating cummeRbund CuffDataDB')
+
+    def set_meta( self, dataset, **kwd ):
+        def get_contents(fname):
+            contents = ''
+            with open(fname,'r') as fh:
+                contents = fh.read()
+            return contents
+        if not dataset.has_data():
+            return
+        try:
+            ## Create a tmpdir
+            ## create an Rscript to write out info about the CuffData, e.g. samples replicates gene_ids
+            ## define file names to use as sinks for each type of data
+            # tmp_dir = tempfile.mkdtemp()
+            tmp_dir = '/tmp/gx/cuffdb'
+            if not os.path.isdir(tmp_dir):
+                os.makedirs(tmp_dir)
+            rscript = tempfile.NamedTemporaryFile( dir=tmp_dir,suffix='.r' ).name
+            rscript_fh = open( rscript, 'wb' )
+            rscript_fh.write('library(cummeRbund)\n')
+            rscript_fh.write('cuff<-readCufflinks(dir = "", dbFile = "%s", rebuild = F)\n' % (dataset.file_name))
+            rscript_fh.write('sink("%s")\n' % ("out.blurb"))
+            rscript_fh.write('print(cuff)\n')
+            rscript_fh.write('sink()\n')
+            rscript_fh.write('sink("%s")\n' % ("out.samples"))
+            rscript_fh.write('cat(samples(cuff)[[2]],sep=",")\n')
+            rscript_fh.write('sink()\n')
+            rscript_fh.write('sink("%s")\n' % ("out.replicates"))
+            rscript_fh.write('cat(replicates(cuff)[[4]],sep=",")\n')
+            rscript_fh.write('sink()\n')
+            rscript_fh.write('sink("%s")\n' % ("out.gene_ids"))
+            rscript_fh.write('cat(annotation(genes(cuff))[[1]],sep=",")\n')
+            rscript_fh.write('sink()\n')
+            rscript_fh.close()
+            cmd = ( "Rscript --vanilla %s" % rscript )
+            tmp_stderr_name = tempfile.NamedTemporaryFile( dir=tmp_dir,suffix='.err' ).name
+            tmp_stderr = open( tmp_stderr_name, 'wb' )
+            proc = Popen( args=cmd, shell=True, cwd=tmp_dir, stderr=tmp_stderr.fileno() )
+            returncode = proc.wait()
+            tmp_stderr.close()
+            flist = os.listdir(tmp_dir)
+            for i,fname in enumerate(flist):
+                sfname = os.path.split(fname)[-1]
+                if sfname == 'out.blurb':
+                    dataset.blurb = get_contents(os.path.join(tmp_dir,fname))
+                elif sfname == 'out.samples':
+                    dataset.metadata.sample_names = get_contents(os.path.join(tmp_dir,fname)).split(',')
+                elif sfname == 'out.replicates':
+                    dataset.metadata.replicate_names = get_contents(os.path.join(tmp_dir,fname)).split(',')
+                elif sfname == 'out.gene_ids':
+                    dataset.metadata.gene_ids = get_contents(os.path.join(tmp_dir,fname)).split(',')
+        except Exception, e:
+            log.error('Error setting cummeRbund CuffDataDB metadata : %s' % str(e))
+
