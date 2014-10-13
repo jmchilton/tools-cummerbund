@@ -135,8 +135,7 @@ class CuffDataDB( Binary ):
             ## Create a tmpdir
             ## create an Rscript to write out info about the CuffData, e.g. samples replicates gene_ids
             ## define file names to use as sinks for each type of data
-            # tmp_dir = tempfile.mkdtemp()
-            tmp_dir = '/tmp/gx/cuffdb'
+            tmp_dir = tempfile.mkdtemp()
             if not os.path.isdir(tmp_dir):
                 os.makedirs(tmp_dir)
             rscript = tempfile.NamedTemporaryFile( dir=tmp_dir,suffix='.r' ).name
